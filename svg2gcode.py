@@ -36,9 +36,13 @@ def extract_points(path):
             x.append(segment.end.real)
             y.append(segment.start.imag)
             y.append(segment.end.imag)
-        elif isinstance(segment, svgpathtools.path.CubicBezier):
+        elif isinstance(segment, svgpathtools.path.CubicBezier) or isinstance(segment, svgpathtools.path.QuadraticBezier):
+            arc_len = segment.length()
+            requested_num_segment = math.ceil(
+                arc_len / BEZIER_DISCRETIZATION_LENGTH_MM)
+
             poly = segment.poly()
-            for t in numpy.linspace(0, 1, 32):
+            for t in numpy.linspace(0, 1, min(requested_num_segment, MAX_BEZIER_DISCRETIZATION_POINTS)):
                 v = poly(t)
                 x.append(v.real)
                 y.append(v.imag)
