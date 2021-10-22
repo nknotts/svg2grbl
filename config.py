@@ -14,6 +14,7 @@ def preamble():
 def postamble():
     yield ''
     yield 'G0 X0 Y0'
+    yield 'M30'
 
 
 def pen_up():
