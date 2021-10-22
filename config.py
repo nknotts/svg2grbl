@@ -17,12 +17,12 @@ def postamble():
 
 
 def pen_up():
-    yield 'M3 S30'
+    yield 'M5'
     yield from gcode_pause(0.15)
 
 
 def pen_down():
-    yield 'M5'
+    yield 'M3 S30'
     yield from gcode_pause(0.15)
 
 
