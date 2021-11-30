@@ -2,6 +2,8 @@
 
 import math
 import argparse
+import logging
+import time
 
 import svgpathtools.document
 import svgpathtools.path
@@ -86,16 +88,14 @@ def translate_paths(paths, x, y):
 
 
 def generate_paths(fname):
-
     is_canvas_landscape = True if USABLE_WIDTH >= USABLE_HEIGHT else False
 
     doc = svgpathtools.document.Document(fname)
     paths = doc.paths()
     bounds = get_bounds(paths)
 
-    document_rotation_deg = -90
-    auto_rotate = False
-    if auto_rotate:
+    document_rotation_deg = MANUAL_ROTATION_DEG
+    if AUTO_ROTATE:
         document_rotation_deg = 0 if is_canvas_landscape == bounds.is_landscape else 90
 
     paths = rotate_paths(paths, document_rotation_deg, bounds)
@@ -158,7 +158,9 @@ def get_segments(fname):
             return math.sqrt((x*x) + (y*y))
 
     def paths():
-        for path in generate_paths(fname):
+        generated_paths = generate_paths(fname)
+        for path_idx, path in enumerate(generated_paths):
+            logging.info(f"Generating Path {path_idx+1}/{len(generated_paths)}")
             for x, y in extract_points(path):
                 yield Segment(x, y)
 
@@ -202,6 +204,7 @@ def optimize_segments(segments):
 
 
 def generate_gcode(fname):
+    t0 = time.time()
 
     yield from preamble()
 
@@ -210,8 +213,11 @@ def generate_gcode(fname):
 
     segments_optimized = optimize_segments(segments)
     total_optimized_distance = get_total_distance(segments_optimized)
+    logging.info(f'Original Path Travel: {total_distance:.1f} mm, Optimized Path Travel: {total_optimized_distance:.1f}')
 
-    print(total_distance, total_optimized_distance)
+    if total_distance < total_optimized_distance:
+        logging.warning("Using original path since it is shorter than optimized path")
+        segments_optimized = segments 
 
     for segment in segments_optimized:
         yield ''
@@ -222,6 +228,9 @@ def generate_gcode(fname):
         yield from pen_up()
 
     yield from postamble()
+
+    tend = time.time()
+    logging.info(f'Completed g-code generation in {tend-t0:.1f} seconds')
 
 
 def svg2gcode(input_fname, output_fname):
@@ -241,5 +250,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input_fname')
     parser.add_argument('-o', '--output_fname', required=False)
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        default='info',
+        help='Log message level - default: "info"',
+        choices=['debug', 'info', 'warning', 'error', 'critical']
+    )
+
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format='%(asctime)s.%(msecs)03d | %(levelname)8s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
+    logger = logging.getLogger()
+    logger.setLevel(args.log_level.upper())
     svg2gcode(args.input_fname, args.output_fname)

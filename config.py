@@ -27,6 +27,9 @@ def pen_down():
     yield from gcode_pause(0.15)
 
 
+AUTO_ROTATE = True
+MANUAL_ROTATION_DEG = 0 # only used if AUTO_ROTATE == False
+
 CANVAS_WIDTH_X = in2mm(11)
 CANVAS_WIDTH_Y = in2mm(8.5)
 
